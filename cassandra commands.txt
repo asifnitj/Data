@@ -1,0 +1,216 @@
+
+start the cassandra server
+---------------------------
+cassandra -f
+
+execute commands from command prompt
+------------------------------------
+cqlsh --help
+cqlsh --version 
+
+in the new terminal type cqlsh
+------------------------------
+cqlsh>
+
+to verify the host and version
+------------------------------
+show host;
+show version;
+
+
+to view all the commands
+------------------------------
+cqlsh>help
+
+
+to view syntax for one of the command
+-------------------------------------
+cqlsh>help create_table
+
+
+to terminate from cqlsh
+------------------------
+exit
+
+
+1.Create a keyspace.
+-------------------
+CREATE KEYSPACE "training" WITH REPLICATION = { 'class' : 'SimpleStrategy' , 'replication_factor' :3 };
+
+
+2.list all the keyspaces
+------------------------
+describe keyspaces;
+
+
+2.1 check the schema for keyspaces
+------------------------------------
+select * from system.schema_keyspaces;
+
+
+2.2 Alter schema for keyspaces
+------------------------------
+ALTER KEYSPACE "training" WITH REPLICATION = { 'class' : 'SimpleStrategy' , 'replication_factor' :2};
+
+
+2.3 Drop the schema for key space
+------------------------------------
+drop keyspace <key space>
+
+3. to check the cluster
+-----------------------
+describe cluster;
+
+
+3. use the keyspace
+--------------------
+use training;
+
+
+4.1 create the table in the selected keyspace
+---------------------------------------------
+CREATE columnfamily employee (
+empID int,
+first_name varchar,
+last_name varchar,
+salary int,
+deptID int,
+city varchar,
+PRIMARY KEY (empID));
+
+or 
+
+CREATE table employee (
+empID int,
+first_name varchar,
+last_name varchar,
+salary int,
+deptID int,
+city varchar,
+PRIMARY KEY (empID));
+
+
+
+4.1.1 - Add and drop columns in a table
+---------------------------------------
+alter table employee
+add state text;
+	
+alter table employee
+drop deptID;
+
+
+4.1.2 - To drop a table
+-----------------------
+drop table <table name>;
+
+4.1.3 to delete only data
+--------------------------
+truncate <table name>;
+
+
+
+5. To show tables in a keyspace
+---------------------------------
+use <keyspace>;
+describe tables;
+
+6. To check the schema of a table
+---------------------------------
+describe table <table_name>
+
+7. insert values into keyspace
+------------------------------
+insert into employee (empID, first_name, last_name, salary, deptID, city)
+values (101, 'Sanjay1', 'Sharma', 30000, 10, 'Pune');
+
+insert into employee (empID, first_name, last_name, salary, deptID, city)
+values (105, 'Rahul5', 'Joshi', 35000, 10, 'Bangalore');
+
+insert into employee (empID, first_name, last_name, salary, deptID, city)
+values (103, 'Amit', 'Sinha', 27000, 10, 'Delhi');
+
+insert into employee (empID, first_name, last_name, salary, deptID, city)
+values (108, 'Sherish', 'A', 40000, 12, 'Hyd');
+
+
+8. select statement for table
+-----------------------------
+select * from employee;
+
+ 
+8.1 to know the timestamp of each column (except for primary key)
+-----------------------------------------------------------------
+select empid, first_name, writetime(first_name) from employee;
+
+select empid, city, writetime(city) from employee;
+
+
+
+
+9. Capture commmand
+--------------------
+capture 'outputfile20'
+
+select * from employee where empid = 105;
+
+--Open a new terminal
+cat /home/hduser/outpufile
+
+capture off;
+
+
+10. Expand command
+------------------
+expand on;
+select token(empid), * from employee;
+expand off;
+
+
+
+11.copy To and From a local csv file
+-----------------------------------
+
+copy employee to '/home/hduser/myfile20';
+
+copy nyse from 'nyse2.csv';
+
+CREATE columnfamily nyse (
+exchange_name text,
+stock_id text,
+stk_dt text,
+open double,
+high double,
+low double,
+close double,
+volume bigint,
+adj_cose double,
+PRIMARY KEY (stock_id, stk_dt));
+
+stock_id is a partition key
+stk_dt is a clustering key
+
+
+12. To execute commands in a batch file
+---------------------------------------
+source 'cas_inputfile.txt';
+
+
+13. batch commands for insert, update and delete
+-------------------------------------------------
+begin batch 
+update employee set salary = 45000 where empid = 101;
+update employee set salary = 15000 where empid = 102;
+update employee set salary = 25000 where empid = 103;
+
+apply batch;
+
+
+14. Update and delete command
+-------------------------------
+update employee set salary = 25000 where empid = 102; 
+update employee set first_name = null where empid = 101;
+
+
+delete from employee where empid = 103;
+
