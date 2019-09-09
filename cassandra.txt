@@ -1,0 +1,239 @@
+Cassandra==
+
+in cassandra - there is no single point of failure(SPOF)
+ring sturcture - in cassandra
+master slave - in hbase
+
+outer space is known as - keyspace
+
+replication-
+1) simple strategy - for one data center
+2) topology strategy - for multi data center
+ darta
+
+** define schema at run time - in HBase
+   define structure first  - in Cassandra
+
+1)creation of keyspace
+CREATE KEYSPACE "training" WITH REPLICATION = {'class' : 'SimpleStrategy','replication_factor' :3};
+
+describe keyspaces;
+
+use training;
+
+2) creation of table/column family
+
+CREATE columnfamily employee( empID int, first_name varchar, last_name varchar, salary int, deptId int, city varchar,
+ PRIMARY KEY (empID));
+
+or
+
+CREATE table employee( empID int, first_name varchar, last_name varchar, salary int, deptId int, city varchar,
+ PRIMARY KEY (empID));
+
+describe table employee;
+
+insert into employee (empID, first_name, last_name, salary, deptID,city) values (101, 'Asif', 'Mohd',50000,10,'Mumbai');
+insert into employee (empID, first_name, last_name, salary, deptID,city) values (105, 'Rahul', 'Sharma',50000,10,'Pune');
+insert into employee (empID, first_name, last_name, salary, deptID,city) values (110, 'Rajan', 'Singh',50000,10,'BAnglore');
+insert into employee (empID, first_name, last_name, salary, deptID,city) values (115, 'Madhav', 'Jain',50000,10,'Gurgaon');
+select * from employee;
+
+ empid | city     | deptid | first_name | last_name | salary
+-------+----------+--------+------------+-----------+--------
+   110 | BAnglore |     10 |      Rajan |     Singh |  50000
+   105 |     Pune |     10 |      Rahul |    Sharma |  50000
+   115 |  Gurgaon |     10 |     Madhav |      Jain |  50000
+   101 |   Mumbai |     10 |       Asif |      Mohd |  50000
+
+cqlsh:training> insert into employee (empID,city) values (141,'BAnglore');
+cqlsh:training> select * from employee;
+
+ empid | city     | deptid | first_name | last_name | salary
+-------+----------+--------+------------+-----------+--------
+   110 | BAnglore |     10 |      Rajan |     Singh |  50000
+   105 |     Pune |     10 |      Rahul |    Sharma |  50000
+   115 |  Gurgaon |     10 |     Madhav |      Jain |  50000
+   141 | BAnglore |   null |       null |      null |   null
+   101 |   Mumbai |     10 |       Asif |      Mohd |  50000
+
+
+=== if we try to enter data at same id ( pk) then at same id record will be updated / overwrite
+=== here if need only some of data can be strored
+=== sorting will be always based on hash value( token id) / not on PK
+select empid , token(empid) from employee;
+
+ empid | token(empid)
+-------+----------------------
+   110 | -9093154533455926434
+   105 | -7391382110672631311
+   115 |    76947448718002913
+   101 |  5997692671872032067
+
+
+== to show tables
+describe tables;
+
+=> murmur3 partiotion (default) [ concept to calculate hash value ] ( murmur3Partitioner )
+=> primasry key is called partiotion key in cassandra
+
+To know thr timestamp of a column===>
+
+select empid, first_name, writetime(first_name) from employee;
+
+
+========================================================================
+compound primary key--
+ includes -
+	a)partition key
+	b)cluster key (it sorts the data on that value)
+
+create columnfamily nyse(
+            ... exchange_name text,
+            ... stock_id text,
+            ... stk_dt text,
+            ... open double,
+            ... high double,
+            ... low double,
+            ... close double,
+            ... volume bigint,
+            ... adj_close double,
+            ... PRIMARY KEY(stock_id, stk_dt));
+copy nyse from '/home/cloudera/nyse2.csv';
+
+2 rows imported in 0.008 seconds.
+cqlsh:training> select * from nyse;
+
+ stock_id | stk_dt     | adj_close | close | exchange_name | high | low  | open | volume
+----------+------------+-----------+-------+---------------+------+------+------+--------
+      AEA | 2010-02-05 |      4.41 |  4.41 |          NYSE | 4.42 | 4.54 | 4.22 | 194300
+      AEA | 2010-02-08 |      4.24 |  4.24 |          NYSE | 4.42 | 4.42 | 4.21 | 205500
+
+
+=================================================================
+if want to run a query on non primary key column then
+
+create index on employee(city);
+select * from employee where city ='Mumbai';
+
+===================================================
+capturing of data into a file ----->
+
+capture '/home/cloudera/outputfile'
+Now capturing query output to '/home/cloudera/outputfile'.
+
+after this if we run a query it will we stored in that outputfile in cloudera.
+
+to off the capture --->
+capture off;
+
+=======================================================
+To  check the all column individually------->
+expand on;
+Now Expanded output is enabled
+cqlsh:training> select * from employee;
+
+@ Row 1
+------------+-----------
+ empid      | 110
+ city       | BAnglore
+ deptid     | 10
+ first_name | Rakshit
+ last_name  | Singh
+ salary     | 50000
+
+@ Row 2
+------------+-----------
+ empid      | 105
+ city       | Allahabad
+ deptid     | 10
+ first_name | Rahul
+ last_name  | Sharma
+ salary     | 50000
+
+@ Row 3
+------------+-----------
+ empid      | 115
+ city       | Gurgaon
+ deptid     | 10
+ first_name | Madhav
+ last_name  | Jain
+ salary     | 50000
+
+@ Row 4
+------------+-----------
+ empid      | 141
+ city       | BAnglore
+ deptid     | null
+ first_name | null
+ last_name  | null
+ salary     | null
+
+@ Row 5
+------------+-----------
+ empid      | 101
+ city       | Mumbai
+ deptid     | 10
+ first_name | Asif
+ last_name  | Mohd
+ salary     | 50000
+
+(5 rows)
+cqlsh:training> expand off;
+Disabled Expanded output.
+================================================================
+copy to a file-->
+
+copy employee to '/home/cloudera/myfile20';
+
+================================================================
+batch processing 
+create a file in cloudera
+nano filename;
+
+write ur command here 
+
+ctrl+x , Y then enter
+now run this command from cassandra-->
+
+source '/home/cloudera/cas_inputfile';
+
+===================================================================
+
+batch commands
+
+cqlsh:training> begin batch
+            ... update employee set salary = 51000 where empid = 110;
+            ... update employee set salary = 54000 where empid = 115;
+            ... apply batch;
+cqlsh:training> select * from employee;
+
+ empid | city      | deptid | first_name | last_name | salary
+-------+-----------+--------+------------+-----------+--------
+   110 |  BAnglore |     10 |    Rakshit |     Singh |  51000
+   105 | Allahabad |     10 |      Rahul |    Sharma |  50000
+   115 |   Gurgaon |     10 |     Madhav |      Jain |  54000
+   141 |  BAnglore |   null |       null |      null |   null
+   101 |    Mumbai |     10 |       Asif |      Mohd |  50000
+
+====================================================================
+id we are up[dating a key that is not present then it will be inserted at that place
+
+============================================================
+ delete one row -
+delete from employee where empid = 120000;
+
+
+to delete only one column -
+
+update employee set salary= null where empid = 110;
+
+==============================================================
+to add a column
+		alter table employee
+            ... add state text;
+ to drop a column
+		alter table employee
+            ... drop state;
+
+==========================================================

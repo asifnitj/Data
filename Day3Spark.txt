@@ -1,0 +1,85 @@
+Id
+Name
+Sex
+Age
+Height
+Weight
+Team
+NOC
+Games
+Year
+Season
+City
+Sport
+Event
+Medal
+
+
+
+===============================================================
+jar file is collection of classes
+
+how to create spark program through eclipse-
+1) lainch eclipse in scala mode
+2) create scala project
+3) create scala object
+4) write the code in object
+5) add external jars for suppport of classees
+6) save the file - compiling happens automatically
+class file under workspace/project/bin
+7) we combine all class files into one jar - by export option
+8) run the job,
+spark -submit --class WordCount --master local myjar.jar <iput> <output>
+
+
+
+==========================================================================
+  
+Spark streaming-
+
+import org.apache.spark._
+import org.apache.spark.streaming._
+sc.stop()
+val conf = new SparkConf().setMaster("local[2]").setAppName("NetworkWordCount")
+val ssc = new StreamingContext(conf, Seconds(10))
+val lines = ssc.socketTextStream("localhost",9999)
+val wordsFlatMap = lines.flatMap(_.split(" "))
+val wordsMap = wordsFlatMap.map(w=> (w,1))
+val wordCount = wordsMap.reduceByKey(_+_)
+wordCount.print()
+wordCount.saveAsTextFiles("file:/home/cloudera/spark-streaming")
+ssc.start()
+
+To start real time host--
+nc -lk 9999
+
+
+============================================================================
+
+No Sql dbs -
+1) structured
+2) Non structured
+
+Run the queries much faster caompare to RDBMS.
+
+Examples of no sql -
+a) google search(it retreive data very quickly)
+b) e-commerce sites like Amazon( it is handling big data)
+c) Aadhar data --- each record is flexible
+
+
+No SQl dbs compliments RDBMS
+In No SQL data is queried faster bcoz the data is denormalize.
+
+Writing is cheap , reading is expensive
+if queries are 90% , insert/update 10%
+
+Types of NoSQL-
+1. key-value --- eg. DynamoDB (Amzon)
+2. Columnar ---eg Google's BIg Table, Cassandra,Hbase
+3. Document --eg MangoDB
+4. Graph BAsed --eg
+
+
+
+

@@ -1,0 +1,282 @@
+Spark SQL--
+
+How to run SQL queries on RDDs.
+RDD(unstructured data)------------------- scala case class ------------------------------ Dataframe(structured)
+
+What is scala case Class?
+It is mechanism to store data in a structured way in scala
+
+NYSE.csv =====> load the data into RDD
+	
+
+
+val nyseRDD = sc.textFile("file:/home/cloudera/NYSE.csv")
+nyseRDD.count
+
+case class nyse(exchangename:String, stockid:String, date:String, open:Double, high:Double, low:Double, close:Double, volume:Long, adj_close:Double)
+val nysesplit = nyseRDD.map(a=>a.split(","))
+
+val nyseObj = nysesplit.map(v=>nyse(v(0).trim,v(1).trim,v(2).trim,v(3).toDouble,v(4).toDouble,v(5).toDouble,v(6).toDouble,v(7).toLong,v(8).toDouble))
+nyseObj.take(10).foreach(println)
+
+val nyseDf = nyseObj.toDF
+nyseDf.printSchema
+nyseDf.show
++------------+-------+----------+----+----+----+-----+------+---------+
+|exchangename|stockid|      date|open|high| low|close|volume|adj_close|
++------------+-------+----------+----+----+----+-----+------+---------+
+|        NYSE|    AEA|2010-02-08|4.42|4.42|4.21| 4.24|205500|     4.24|
+|        NYSE|    AEA|2010-02-05|4.42|4.54|4.22| 4.41|194300|     4.41|
+|        NYSE|    AEA|2010-02-04|4.55|4.69|4.39| 4.42|233800|     4.42|
+|        NYSE|    AEA|2010-02-03|4.65|4.69| 4.5| 4.55|182100|     4.55|
+|        NYSE|    AEA|2010-02-02|4.74| 5.0|4.62| 4.66|222700|     4.66|
+|        NYSE|    AEA|2010-02-01|4.84|4.92|4.68| 4.75|194800|     4.75|
+|        NYSE|    AEA|2010-01-29|4.97|5.05|4.76| 4.83|222900|     4.83|
+|        NYSE|    AEA|2010-01-28|5.12|5.22|4.81| 4.98|283100|     4.98|
+|        NYSE|    AEA|2010-01-27|4.82|5.16|4.79| 5.09|243500|     5.09|
+|        NYSE|    AEA|2010-01-26|5.18|5.18|4.81| 4.84|554800|     4.84|
+|        NYSE|    AEA|2010-01-25|5.42|5.48| 5.2| 5.22|257300|     5.22|
+|        NYSE|    AEA|2010-01-22|5.52|5.59|5.31| 5.37|260800|     5.37|
+|        NYSE|    AEA|2010-01-21|5.67|5.74|5.37| 5.51|264300|     5.51|
+|        NYSE|    AEA|2010-01-20|5.65| 5.7|5.53| 5.66|244600|     5.66|
+|        NYSE|    AEA|2010-01-19|5.54| 5.7|5.54| 5.69|368000|     5.69|
+|        NYSE|    AEA|2010-01-15|5.48|5.55|5.33| 5.54|435500|     5.54|
+|        NYSE|    AEA|2010-01-14|5.41| 5.5|5.39| 5.41|272200|     5.41|
+|        NYSE|    AEA|2010-01-13| 5.5| 5.5|5.41| 5.45|176400|     5.45|
+|        NYSE|    AEA|2010-01-12|5.47|5.51|5.41| 5.46|233100|     5.46|
+|        NYSE|    AEA|2010-01-11|5.64|5.64|5.49| 5.55|178900|     5.55|
++------------+-------+----------+----+----+----+-----+------+---------+
+
+
+nyseDf.registerTempTable("spark_nyse");
+
+
+### to find total volume for each stock
+val stk_vol = sqlContext.sql("select stockid, sum(volume) from spark_nyse group by stockid")
+stk_vol.show  //it will show only 20 recorsd
+ stk_vol.collect.foreach(println) //for all records
+
+### maximun volume 
+val stk_vol = sqlContext.sql("select stockid, sum(volume)as total from spark_nyse group by stockid order by total desc limit 1")
+stk_vol.show
+
+
+### find all tyime high and all time low price for each stock
+
+val high_low = sqlContext.sql("select stockid, max(high), min(low) from spark_nyse group by stockid")
+high_low.show
+val high_low_AEA = sqlContext.sql("select stockid, max(high), min(low) from spark_nyse where stockid = 'AEA' group by stockid")
+high_low_AEA.show
++-------+-----+---+                                                             
+|stockid|  _c1|_c2|
++-------+-----+---+
+|    AEA|23.94|0.8|
++-------+-----+---+
+
+## find all time high and low price for those stocks whose all time high is more than 20
+
+val high_low_20 = sqlContext.sql("select stockid, max(high) as myMax, min(low) from spark_nyse group by stockid having myMax>20")
+ high_low_20.show
+
+######################################################################################
+ 
+ Procedure to be followed--->
+
+1) Load the data
+2) define case class
+3) RDD -------> convert into case class object
+4) case object ---> dataframe
+5) temp table
+6) sql queries
+
+
+######################################################################################
+
+
+val RetailRDD = sc.textFile("file:/home/cloudera/Retail")
+RetailRDD.count
+case class retail(txn_dt:String, custno:String, age:String, zipcode:String, category:String, product:String, qty:Int, cost:Long, sales:Long)
+val retailSplit = RetailRDD.map(_.split(";"))
+val retailObj = retailSplit.map(v=>retail(v(0).trim,v(1).trim,v(2).trim,v(3).trim,v(4).trim,v(5).trim,v(6).toInt,v(7).toLong,v(8).toLong))
+retailObj.take(10).foreach(println)
+ val retailDF = retailObj.toDF
+retailDF.printSchema
+retailDF.count
+retailDF.show
+ retailDF.registerTempTable("retail");
+-------------------------------------------------------------------------------------
+1) Count of distint customers and total sales for each age group and for a given month(Jan)
+
+select age ,count(distinct(custno)), sum(sales) as total from retail where month(txn_dt)=1 group by age order by total desc
+val q1 = sqlContext.sql("select age ,count(distinct(custno)), sum(sales) as total from retail where month(txn_dt)=1 group by age order by total desc")
+
+
+2) count of distinct cust and total sales for one age group(A) for aall product----->
+
+select product, count(distinct(custno)), sum(sales) as total from retail where age = 'A' group by product order by total desc limit 10
+
+val q2 = sqlContext.sql("select product, count(distinct(custno)), sum(sales) as total from retail where age = 'A' group by product order by total desc limit 10")
+q2.show
+
+3) area wise sales
+
+select zipcode , sales from retail group by zipcode
+
+scala> val q1 = sqlContext.sql("select zipcode, sum(sales) as total from retail group by zipcode order by total desc")
+
+scala> q1.show
++-------+--------+                                                              
+|zipcode|   total|
++-------+--------+
+|      E|37994770|
+|      F|31548341|
+|      G|12593633|
+|      C| 9866326|
+|      D| 5447881|
+|      H| 5245595|
+|      B| 2799090|
+|      A| 2344440|
++-------+--------+
+
+4) top10 viable product
+
+select product, sum(sales-cost) as profit from retail group by product order by profit
+val q4 = sqlContext.sql("select product, sum(sales-cost) as profit from retail group by product order by profit desc limit 10")
+
+
+scala> q4.show
++-------------+------+                                                          
+|      product|profit|
++-------------+------+
+|4909978112950| 71312|
+|8712045008539| 46586|
+|     20564100| 38699|
+|4710628131012| 34429|
+|0729238191921| 33645|
+|4902430493437| 32970|
+|     20556433| 31862|
+|4901422038939| 31616|
+|4710114128038| 29168|
+|7610053910787| 26839|
++-------------+------+
+
+5) all loss making products (highest loss to be first record)
+val q5 = sqlContext.sql("select product,sum(sales-cost)as profit from retail group by product having profit < 0 order by profit")
+q5.collect.foreach(println)
+
+
+
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+** find top 10 buyers by using spark SQl (use custs.txt and txns.txt)
+_______________________________________________________________________________________________________________________________________
+
+case class customer(id:Int,firstname:String,lastname:String,age:Int,profession:String)
+val custRDD=sc.textFile("file:/home/cloudera/custs.txt")
+val custmap=custRDD.map(_.split(","))
+val custclass=custmap.map(v=>customer(v(0).toInt,v(1).trim,v(2).trim,v(3).toInt,v(4).trim))
+val custDF=custclass.toDF
+custDF.registerTempTable("customer")
+
+val txnRDD=sc.textFile("file:/home/cloudera/txns1.txt")
+case class sales(txnid:Int,txndate:String,custno:Int,amount:Double,category:String,product:String,city:String,state:String,spendby:String)
+val txnmap=txnRDD.map(_.split(","))
+val txnclass =txnmap.map(v=>sales(v(0).toInt,v(1).trim,v(2).toInt,v(3).toDouble,v(4).trim,v(5).trim,v(6).trim,v(7).trim,v(8).trim))
+val txnDF = txnclass.toDF
+txnDF.registerTempTable("sales")
+__________________________________________________________________________________________________________________________________________
+
+val q1 =sqlContext.sql("select custno,sum(amount) from sales group by custno")
+val q1 =sqlContext.sql("select custno,sum(amount) as total from sales group by custno order by total desc limit 10")
+scala> q1.show
+
++-------+------------------+                                                    
+| custno|             total|
++-------+------------------+
+|4009485|            1973.3|
+|4006425|           1732.09|
+|4000221|1671.4700000000003|
+|4003228|           1640.63|
+|4006606|1628.9399999999996|
+|4006467|1605.9499999999998|
+|4004927|           1576.71|
+|4008321|           1560.79|
+|4000815|1557.8200000000002|
+|4001051|           1488.67|
++-------+------------------+
+
+2) top 10 list from sales and cstomer with customer name, age and profession
+
+val q10=sqlContext.sql("select custno,firstname,lastname,age,profession,sum(amount) as total from sales s join customer c on s.custno=c.id  group by custno,firstname,lastname,age,profession order by total desc limit 10")
+
+
+
+
+
+--------------------------------------------------------
+
+===== to import data from hive to spark ========================
+
+import org.apache.spark.sql.hive.HiveContext
+val sqlContext = new HiveContext(sc) 
+val sample = sqlContext.sql("select * from computersalesdb.products").collect()
+sample.foreach(println)
+
+
+
+
+-------------------------------------------------------------
+
+
+========== Export to hive ==================
+
+case class customer(id:Int,firstname:String,lastname:String,age:Int,profession:String)
+val custRDD=sc.textFile("file:/home/cloudera/custs.txt")
+val custmap=custRDD.map(_.split(","))
+val custclass=custmap.map(v=>customer(v(0).toInt,v(1).trim,v(2).trim,v(3).toInt,v(4).trim))
+val custDF=custclass.toDF
+custDF.registerTempTable("customer")
+
+
++++++++++++++++++++++++++++++++++++++
+
+val txnRDD=sc.textFile("file:/home/cloudera/txns1.txt")
+case class sales(txnid:Int,txndate:String,custno:Int,amount:Double,category:String,product:String,city:String,state:String,spendby:String)
+val txnmap=txnRDD.map(_.split(","))
+val txnclass =txnmap.map(v=>sales(v(0).toInt,v(1).trim,v(2).toInt,v(3).toDouble,v(4).trim,v(5).trim,v(6).trim,v(7).trim,v(8).trim))
+val txnDF = txnclass.toDF
+txnDF.registerTempTable("sales")
+
+======================
+val q10=sqlContext.sql("select custno,firstname,lastname,age,profession,sum(amount) as total from sales s join customer c on s.custno=c.id  group by custno,firstname,lastname,age,profession order by total desc limit 10")
+
+
+to export------
+q10.write.mode("overwrite").saveAsTable("capgemini.top10");
+
+
+
+--------------------------------------------------------------------------------------------------------------------
+
+ connection to mysql--------------->>
+
+ val connection = "jdbc:mysql://localhost/MYDB"
+val mysql_props = new java.util.Properties
+mysql_props.setProperty("user","root")
+mysql_props.setProperty("password","cloudera")
+val user_data = sqlContext.read.jdbc(connection,"asi",mysql_props)
+user_data.registerTempTable("harshit")
+val summary = sqlContext.sql("select * from harshit")
+scala> summary.show
++---+----+
+| id|name|
++---+----+
+|123|asif|
++---+----+
+
+to write data back to mysql---
+
+summary.write.mode("append").jdbc(connection,"new_table",mysql_props)
+
+in mysql ---->  select * from new_table

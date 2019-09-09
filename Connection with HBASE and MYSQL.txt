@@ -1,0 +1,77 @@
+==============================================================================
+Creating two table in mysql
+=============================================================================
+[cloudera@quickstart ~]$ mysql -u root -p
+Enter password: 
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 30
+Server version: 5.1.73 Source distribution
+
+Copyright (c) 2000, 2013, Oracle and/or its affiliates. All rights reserved.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> create database college;
+Query OK, 1 row affected (0.06 sec)
+
+mysql> use college;
+Database changed
+mysql> CREATE TABLE student_master(Student_id INT NOT NULL AUTO_INCREMENT, name VARCHAR(40) NOT NULL,address VARCHAR(40) NOT NULL , PRIMARY KEY(student_id));
+Query OK, 0 rows affected (0.20 sec)
+
+mysql> CREATE TABLE fy(fy_id INT NOT NULL AUTO_INCREMENT,student_id INT NOT NULL,result double NOT NULL, PRIMARY KEY(fy_id));
+Query OK, 0 rows affected (0.06 sec)
+
+mysql> INSERT INTO student_master(name, address) VALUES ("ASIf","Alld");
+Query OK, 1 row affected (0.02 sec)
+
+mysql> INSERT INTO student_master(name, address) VALUES ("Akshna","Haryana");
+Query OK, 1 row affected (0.00 sec)
+
+mysql> INSERT INTO student_master(name, address) VALUES ("Harshita","Punjab");
+Query OK, 1 row affected (0.00 sec)
+
+mysql> INSERT INTO student_master(name, address) VALUES ("Reddy","Andhra");
+Query OK, 1 row affected (0.00 sec)
+
+mysql> INSERT INTO fy(student_id, result) VALUES (1,92.5);
+Query OK, 1 row affected (0.06 sec)
+
+mysql> INSERT INTO fy(student_id, result) VALUES (2,90.5);
+Query OK, 1 row affected (0.01 sec)
+
+mysql> select * from fy;
++-------+------------+--------+
+| fy_id | student_id | result |
++-------+------------+--------+
+|     1 |          1 |   92.5 |
+|     2 |          2 |   90.5 |
++-------+------------+--------+
+2 rows in set (0.00 sec)
+
+mysql> select * from student_master;
++------------+----------+---------+
+| Student_id | name     | address |
++------------+----------+---------+
+|          1 | ASIf     | Alld    |
+|          2 | Akshna   | Haryana |
+|          3 | Harshita | Punjab  |
+|          4 | Reddy    | Andhra  |
++------------+----------+---------+
+4 rows in set (0.01 sec)
+
+
+==============================================================================================================
+creating columnfamily and column table in hbase where we will import the mysql data
+==============================================================================================================
+create 'college','student_profile','fyresults'
+
+=============================================================================================================
+import commnd from cloudera prompt to connect mysl with hbase and importing the data
+1)sqoop import --connect jdbc:mysql://localhost/college --username root --password 'cloudera' --table student_master --columns "student_id,name,address" --hbase-table college --column-family student_profile --hbase-row-key student_id -m1;
+
+2)sqoop import --connect jdbc:mysql://localhost/college --username root --password 'cloudera' --table fy --columns "student_id,result" --hbase-table college --column-family fyresults --hbase-row-key student_id -m1

@@ -1,0 +1,190 @@
+SPARK COMMANDS-
+
+------------------------------->To start shell type this >> spark-shell
+//to load the data
+val inputfile = sc.textFile("file:/home/cloudera/newdf.txt");
+//count lines
+inputfile.count
+//to print
+inputfile.foreach(println)
+//for first five line to print
+inputfile.take(5).foreach(println)
+//to upper the file data
+val upper=inputfile.map(a=> a.toUpperCase());
+upper.foreach(println)
+//to save this upper case data
+upper.saveAsTextFile("file:/home/cloudera/spark1")
+--------------------------------------------------------------------------------------
+
+
+//Loading data from HDFS
+val inputfile1 = sc.textFile("hdfs://quickstart.cloudera:8020/user/cloudera/goat/gh");
+
+//for checking line length of each line
+val linelength = inputfile1.map(s=>s.length);
+//to print line length of each line
+linelength.foreach(println)
+//to check total line length
+val totallength = linelength.reduce((a,b)=> a+b);
+//to print the total linelength
+println("total Length :" +totallength);
+
+--------------------------------------------------------------------------------------
+
+//word count
+val inputfile2 = sc.textFile("file:/home/cloudera/file1.txt");
+val transform = inputfile2.map(line => line.split(" ")) // it will give array of each line so we dont use this for word count
+transform.collect  // result
+res11: Array[Array[String]] = Array(Array(hive, hbase, hive, java), Array(scala, java, hbase), Array(hive, java))
+
+we have to use this for word count--->
+val transform = inputfile2.flatMap(line => line.split(" ")); //to separate each word
+val keybyword = transform.map(word => (word ,1));
+keybyword.foreach(println)
+val counts = keybyword.reduceByKey((a,b) =>a+b).sortByKey();----//by default ascending order
+counts.foreach(println);
+-----count of each repeated word 
+transform.foreach(println)
+//for descending order
+ val counts = keybyword.reduceByKey((a,b) =>a+b).sortByKey(false);
+counts.foreach(println);
+
+//sortby value
+val sortbyval = counts.collect.sortBy(-_._2);
+
+--> here 2 is thecolumn number and minus is used for desc
+
+sortbyval.foreach(println)
+
+//to save thias we cant use saveAsTextFile directly we have to use this sc.parallelize
+//reason is array cant be stored as textfile
+sc.parallelize(sortbyval).saveAsTextFile("file:/home/cloudera/spark2")
+
+====================================================================================================
+always run count after upload coz it follows lazy evaluation 
+
+coz it execute only when action is called
+
+====================================================================================================
+ val lines = sc.textFile("file:/home/cloudera/mapred-hduser-historyserver-ubuntu.log")
+ lines.count
+val lines_lower = lines.map(a=>a.toLowerCase());
+val errors = lines_lower.filter(a=>a.contains("error"));
+ errors.count
+errors.cache() //to save this file for long period use
+errors.filter(a=>a.contains("sigterm")).count()
+errors.filter(a=>a.contains("token")).count()
+============================================================
+//for customerdata
+val custRDD = sc.textFile("file:/home/cloudera/custs.txt");
+custRDD.count
+custRDD.take(10).foreach(println)
+val professionRDD = custRDD.map(x=> (x.split(",")(4),1));
+professionRDD.take(10).foreach(println)
+val profcount = professionRDD.reduceByKey(_+_);
+profcount.foreach(println);
+val sortbyval = profcount.collect.sortBy(-_._2);
+ sortbyval.foreach(println)
+===============================================================
+find top 10 selling product
+
+to find hihest selling product-------------
+val txnRDD = sc.textFile("file:/home/cloudera/txns1.txt");
+val productRDD = txnRDD.map(x=>(x.split(",")(5),x.split(",")(3).toDouble))
+
+productRDD.take(10).foreach(println)
+val prodcount = productRDD.reduceByKey(_+_);
+
+val sortbyval = prodcount.collect.sortBy(-_._2);
+val top10 = sortbyval.take(10)
+top10.foreach(println) ---------------highest selling 
+
+===========================================================
+val txnRDD = sc.textFile("file:/home/cloudera/txns1.txt");
+val custRDD = txnRDD.map(x=>(x.split(",")(2),x.split(",")(3).toDouble))
+val spendbyCust = custRDD.reduceByKey(_+_);
+val sortbyval =spendbyCust.collect.sortBy(-_._2);
+ val top10 = sortbyval.take(10)
+top10.foreach(println)   /// for hihgest sell customer
+
+=========================================================================
+
+JOINING DAY2--------------------------
+
+=========================================================================
+val joined = top10RDD.leftOuterJoin(custRDD11).map{case (a,(b,c:Option[String]))=>(a,(b,(c.getOrElse("unknown"))))}
+
+making RDD[string + string]
+val transform = joined.map{case (a,b)=> (a,(b.x._1+","+b.x._2))}; //RDD[(String, String)]
+ val transform2 = transform.map(x=>(x._1+","+x._2)) //RDD[String]
+
+=========================================================================================
+
+*************************************************************
+to find top10 product------->
+val RetailRDD = sc.textFile("/file:/home/cloudera/Retail")
+RetailRDD.count
+res46: Long = 817741
+val prodRDD = RetailRDD.map(x=>(x.split(";")(5),x.split(";")(8).toInt))
+prodRDD.take(10).foreach(println)
+val spendbyprod = prodRDD.reduceByKey((a,b)=>a+b)
+spendbyprod.take(10).foreach(println)
+val sortbyval = spendbyprod.collect.sortBy(-_._2)
+sortbyval.take(10).foreach(println)
+
+**************************************************************
+top10 viable product---
+
+val RetailRDD = sc.textFile("file:/home/cloudera/Retail") //loading data
+
+val profitRDD= RetailRDD.map(x=>(x.split(";")(5),x.split(";")(8).toInt-x.split(";")(7).toInt)) //key and value pair
+
+// product id column is key
+//selling price - cost is our profit
+
+profitRDD.take(10).foreach(println)
+val profforprod = profitRDD.reduceByKey((a,b)=>a+b) // adding overall profit of a product
+
+profforprod.take(10).foreach(println)
+val sortbyval = profforprod.collect.sortBy(-_._2) // sort by value then maximum value
+sortbyval.take(10).foreach(println) 
+//top 10 maximum value
+
+**********************************************************************
+//for a specific like for B group top viable prodyct
+
+val RetailRDD = sc.textFile("file:/home/cloudera/Retail")
+val retail= RetailRDD.map(line=>line.split(";").map(_.trim))
+val agefilt = retail.filter(x=>(x(2) == "B"))
+agefilt.count
+res57: Long = 66432    
+
+val ProdRDD = agefilt.map(x=>(x(5), x(8).toInt - x(7).toInt))
+val valsameage = ProdRDD.reduceByKey((a,b)=>a+b)
+valsameage.take(10).foreach(println)
+val sortbyval = valsameage.collect.sortBy(-_._2)
+sortbyval.take(10).foreach(println)
+
+
+
+*****************************************************************************
+
+>>>find out the ID for the customer who has spemnnt the maximum amt in a single transaction
+
+
+val RetailRDD = sc.textFile("file:/home/cloudera/Retail")
+val retail= RetailRDD.map(line=>line.split(";").map(_.trim))
+ val retDet = retail.map(x=>(x(8).toInt))
+retDet.take(10).foreach(println)
+val maxamt = retDet.max
+val cusDet = retail.filter(x=>x(8).toInt == maxamt)
+cusDet.collect
+cusDet.map(x=>x(1)).collect
+val custRDD2 = sc.parallelize(cusDet.map(x=>x(1)).collect)
+custRDD2.foreach(println)
+
+
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
